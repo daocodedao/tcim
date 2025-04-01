@@ -5,7 +5,7 @@ import schedule
 import time
 import random
 import json
-
+from utils.logger_settings import api_logger
 
 openAiClient = OpenAI(base_url="http://39.105.194.16:6691/v1", api_key="key")
 
@@ -21,7 +21,7 @@ groupIds = [
 ]
 
 def jobGetMsgAndSend():
-    print(f"开始获取新闻，时间: {time.strftime('%Y-%m-%d %H:%M:%S')}")
+    api_logger.info(f"开始获取新闻，时间: {time.strftime('%Y-%m-%d %H:%M:%S')}")
     newsList = getNewsArray()
 
     newsTitles = []
@@ -59,7 +59,7 @@ def jobGetMsgAndSend():
     )
 
     result = response.choices[0].message.content
-    print(f"生成的话题: {result}")
+    api_logger.info(f"生成的话题: {result}")
     
     try:
         # 解析JSON结果
@@ -67,19 +67,20 @@ def jobGetMsgAndSend():
         topics = topics_data.get("topics", [])
         
         if not topics:
-            print("未能获取到有效话题")
+            api_logger.error("未能获取到有效话题")
             return
         
         # 开始发送消息到各个群
+        # api_logger.info(f"话题：{topics}")
         send_topics_to_groups(topics)
     except json.JSONDecodeError:
-        print(f"JSON解析错误: {result}")
+        api_logger.error(f"JSON解析错误: {result}")
     except Exception as e:
-        print(f"发生错误: {str(e)}")
+        api_logger.error(f"发生错误: {str(e)}")
 
 def send_topics_to_groups(topics):
     """将话题发送到各个群组，每隔1-3分钟发送一条"""
-    print(f"开始发送话题到群组，共{len(topics)}个话题")
+    api_logger.info(f"开始发送话题到群组，共{len(topics)}个话题")
     
     # 确保话题数量足够
     if len(topics) < len(groupIds):
@@ -97,7 +98,7 @@ def send_topics_to_groups(topics):
         topic = topics[i]
         # 随机等待1-3分钟
         wait_time = random.randint(60, 180)
-        print(f"将在{wait_time}秒后发送到群组{group_id}: {topic}")
+        api_logger.info(f"将在{wait_time}秒后发送到群组{group_id}: {topic}")
         
         # 等待指定时间
         time.sleep(wait_time)
@@ -105,15 +106,15 @@ def send_topics_to_groups(topics):
         # 发送消息
         try:
             sendMsg(group_id, topic)
-            print(f"成功发送到群组{group_id}: {topic}")
+            api_logger.info(f"成功发送到群组{group_id}: {topic}")
         except Exception as e:
-            print(f"发送到群组{group_id}失败: {str(e)}")
+            api_logger.info(f"发送到群组{group_id}失败: {str(e)}")
 
 def run_daily_job():
     """每天早上10点执行任务"""
     schedule.every().day.at("10:00").do(jobGetMsgAndSend)
     
-    print("定时任务已设置，将在每天早上10:00执行")
+    api_logger.info("定时任务已设置，将在每天早上10:00执行")
     
     while True:
         schedule.run_pending()
