@@ -36,5 +36,5 @@ client = TCIMClient(sdk_app_id, secret_key, admin_identifier)
 
 msgTexgt = MessageText(message_text)
 client.send_group_message(group_id, 
-                          messageText=[message_text],
+                          messageText=[msgTexgt],
                           from_account=fromAccount)
