@@ -10,6 +10,7 @@ load_dotenv()
 sdk_app_id = int(os.getenv('SDK_APP_ID', ''))
 secret_key = os.getenv('SECRET_KEY', '')
 admin_identifier = os.getenv('ADMIN_IDENTIFIER', '123456')
+print(sdk_app_id, secret_key, admin_identifier)
 fromAccount = "11002473"
 
 group_id = '73225880'  # 替换为你的群组ID
