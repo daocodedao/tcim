@@ -2,13 +2,14 @@
 # 获取脚本所在目录
 script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 # 获取项目根目录（脚本目录的上一级目录）
-base_dir="$( cd "$script_dir/../.." && pwd )"
+base_dir="$( cd "$script_dir" && pwd )"
 echo "base_dir: $base_dir"
 cd $base_dir
 
 jobDir="${base_dir}"
 echo "jobDir: $jobDir"
 pythonPath=${base_dir}/venv/bin/python
+
 
 . $base_dir/colors.sh
 
