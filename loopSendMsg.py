@@ -194,7 +194,7 @@ def run_daily_job():
 
 if __name__ == "__main__":
     # 如果需要立即执行一次，可以取消下面的注释
-    jobGetMsgAndSend()
+    # jobGetMsgAndSend()
     
     # 启动定时任务
     run_daily_job()
