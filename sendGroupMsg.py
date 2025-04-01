@@ -35,6 +35,8 @@ from tencentcloud_im.tcim_client import TCIMClient, MessageText
 client = TCIMClient(sdk_app_id, secret_key, admin_identifier)
 
 msgTexgt = MessageText(message_text)
-client.send_group_message(group_id, 
+result = client.send_group_message(group_id, 
                           messageText=[msgTexgt],
                           from_account=fromAccount)
+
+print(result)
