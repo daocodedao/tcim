@@ -109,7 +109,7 @@ def getNewsArray():
     websites = [
         ('Decrypt', scrape_decrypt),
         ('Blockworks', scrape_blockworks),
-        ('CoinDesk', scrape_coindesk),
+        # ('CoinDesk', scrape_coindesk),
         ('U.Today', scrape_u_today),
         ('BeInCrypto', scrape_beincrypto),
         ('CryptoTimes', scrape_cryptotimes)  # Add CryptoTimes to the list
