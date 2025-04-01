@@ -5,9 +5,16 @@ import schedule
 import time
 import random
 import json
+import os
+import datetime
 from utils.logger_settings import api_logger
 
 openAiClient = OpenAI(base_url="http://39.105.194.16:6691/v1", api_key="key")
+
+# 添加历史新闻存储路径
+HISTORY_DIR = "./history_news"
+if not os.path.exists(HISTORY_DIR):
+    os.makedirs(HISTORY_DIR)
 
 groupIds = [
     "73225880",
@@ -20,15 +27,79 @@ groupIds = [
     "97380810",
 ]
 
+def get_history_news():
+    """获取历史新闻标题集合，并清理超过7天的历史记录"""
+    history_titles = set()
+    today = datetime.datetime.now().date()
+    
+    # 遍历历史文件
+    for filename in os.listdir(HISTORY_DIR):
+        if not filename.endswith('.json'):
+            continue
+            
+        file_path = os.path.join(HISTORY_DIR, filename)
+        try:
+            # 从文件名获取日期
+            file_date_str = filename.split('.')[0]
+            file_date = datetime.datetime.strptime(file_date_str, "%Y-%m-%d").date()
+            
+            # 如果文件超过7天，删除
+            if (today - file_date).days > 7:
+                os.remove(file_path)
+                api_logger.info(f"删除过期历史新闻: {filename}")
+                continue
+                
+            # 读取历史新闻
+            with open(file_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                for title in data:
+                    history_titles.add(title)
+        except Exception as e:
+            api_logger.error(f"读取历史新闻文件出错: {str(e)}")
+    
+    return history_titles
+
+def save_news_to_history(news_titles):
+    """保存今天的新闻到历史记录"""
+    today_str = datetime.datetime.now().strftime("%Y-%m-%d")
+    file_path = os.path.join(HISTORY_DIR, f"{today_str}.json")
+    
+    try:
+        with open(file_path, 'w', encoding='utf-8') as f:
+            json.dump(news_titles, f, ensure_ascii=False, indent=2)
+        api_logger.info(f"保存今日新闻到历史记录: {len(news_titles)}条")
+    except Exception as e:
+        api_logger.error(f"保存历史新闻出错: {str(e)}")
+
 def jobGetMsgAndSend():
     api_logger.info(f"开始获取新闻，时间: {time.strftime('%Y-%m-%d %H:%M:%S')}")
     newsList = getNewsArray()
 
+    # 获取历史新闻
+    history_titles = get_history_news()
+    api_logger.info(f"历史新闻数量: {len(history_titles)}")
+    
+    # 去重新闻
     newsTitles = []
+    unique_titles = []
     for news in newsList:
-        newsTitles.append(news[1])
-        
-    newsTitles = newsTitles[:30]    
+        title = news[1]
+        newsTitles.append(title)
+        if title not in history_titles:
+            unique_titles.append(title)
+    
+    api_logger.info(f"获取新闻总数: {len(newsTitles)}, 去重后新闻数: {len(unique_titles)}")
+    
+    # 如果去重后没有新闻，使用原始新闻
+    if not unique_titles:
+        api_logger.info("去重后没有新闻，使用原始新闻")
+        unique_titles = newsTitles
+    
+    # 保存今天的新闻到历史记录
+    save_news_to_history(newsTitles)
+    
+    # 使用去重后的新闻
+    unique_titles = unique_titles[:30]
     prompt = f"""
                 你需要从新闻标题中，生成适合聊天的话题。要求如下
                 1. 话题主要是在群聊里使用，最好是问句，问句不要只针对一个人，比如 你对xxx 怎么看。要改为 你们觉得xxxx
@@ -39,7 +110,7 @@ def jobGetMsgAndSend():
                 6. 话题要口语化，不要太严肃
 
                 以下是新闻标题:
-                {newsTitles}
+                {unique_titles}
                 
                 请以 JSON 格式返回结果，格式如下, 不要做任何解释，只返回json:
                 {{
@@ -112,7 +183,8 @@ def send_topics_to_groups(topics):
 
 def run_daily_job():
     """每天早上10点执行任务"""
-    schedule.every().day.at("10:00").do(jobGetMsgAndSend)
+    schedule.every().day.at("08:00").do(jobGetMsgAndSend)
+    schedule.every().day.at("17:00").do(jobGetMsgAndSend)
     
     api_logger.info("定时任务已设置，将在每天早上10:00执行")
     
