@@ -1,0 +1,15 @@
+*.csv
+*.pyc
+venv/
+.env
+__pycache__/
+*.log
+*.sqlite
+*.db
+*.db3
+*.sqlite3
+*.ipynb_checkpoints
+*.sav
+*.pkl
+*.npy
+.vscode/
