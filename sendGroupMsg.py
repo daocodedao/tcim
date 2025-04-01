@@ -3,6 +3,7 @@ import os
 
 
 # 从环境变量获取SDK配置信息
+print(os.getenv('SDK_APP_ID', ''))
 sdk_app_id = int(os.getenv('SDK_APP_ID', ''))
 secret_key = os.getenv('SECRET_KEY', '')
 admin_identifier = os.getenv('ADMIN_IDENTIFIER', '123456')
