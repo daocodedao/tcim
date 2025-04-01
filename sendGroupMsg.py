@@ -1,6 +1,9 @@
 from timsdk import TimClient
 import os
+from dotenv import load_dotenv
 
+
+load_dotenv()
 
 # 从环境变量获取SDK配置信息
 print(os.getenv('SDK_APP_ID', ''))
