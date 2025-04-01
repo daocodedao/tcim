@@ -1,4 +1,4 @@
-from timsdk import TimClient
+
 import os
 from dotenv import load_dotenv
 from utils.logger_settings import api_logger
