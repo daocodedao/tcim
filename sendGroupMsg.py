@@ -39,4 +39,4 @@ result = client.send_group_message(group_id,
                           messageText=[msgTexgt],
                           from_account=fromAccount)
 
-print(result)
+print(result.content)
