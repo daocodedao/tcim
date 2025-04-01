@@ -3,3 +3,4 @@ pandas
 bs4
 python-dotenv
 timsdk
+tencentcloud-sdk-python-im
