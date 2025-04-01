@@ -1,7 +1,8 @@
 from timsdk import TimClient
 import os
 from dotenv import load_dotenv
-
+from utils.logger_settings import api_logger
+from tencentcloud_im.tcim_client import TCIMClient, MessageText
 
 load_dotenv()
 
@@ -9,35 +10,28 @@ load_dotenv()
 # print(os.getenv('SDK_APP_ID', ''))
 sdk_app_id = int(os.getenv('SDK_APP_ID', ''))
 secret_key = os.getenv('SECRET_KEY', '')
-admin_identifier = os.getenv('ADMIN_IDENTIFIER', '123456')
-print(sdk_app_id, secret_key, admin_identifier)
-fromAccount = "11002473"
+admin_identifier = os.getenv('ADMIN_IDENTIFIER', '')
+# print(sdk_app_id, secret_key, admin_identifier)
+fromAccount = "7274252717407870976"
 
-group_id = '73225880'  # 替换为你的群组ID
-message_text = 'ETH能到2000吗？'
+# group_id = '73225880'  # 替换为你的群组ID
+# message_text = 'ETH能到2000吗？'
 
-# tim_client = TimClient(
-#     app_id=sdk_app_id,
-#     app_key=secret_key
-# )
 
-# result = tim_client.group_open_http_svc.send_group_msg(
-#     group_id=group_id,
-#     msg_body=[{
-#         "MsgType": "TIMTextElem",
-#         "MsgContent": {
-#             "Text": message_text
-#         }
-#     }])
 
-# print(result)
 
-from tencentcloud_im.tcim_client import TCIMClient, MessageText
-client = TCIMClient(sdk_app_id, secret_key, admin_identifier)
+# Changed the API endpoint from console.tim.qq.com to the correct one
+SINGAPORE = "https://adminapisgp.im.qcloud.com/v4"
+CHINA = "https://console.tim.qq.com/v4"
+client = TCIMClient(sdk_app_id, 
+                    secret_key, 
+                    admin_identifier,
+                    tencent_url=SINGAPORE)
 
-msgTexgt = MessageText(message_text)
-result = client.send_group_message(group_id, 
+def sendMsg(group_id, message_text):
+    api_logger.info(f"sendMsg: {group_id}, {message_text}")
+    msgTexgt = MessageText(message_text)
+    result = client.send_group_message(group_id, 
                           messageText=[msgTexgt],
                           from_account=fromAccount)
-
-print(result.content)
+    api_logger.info(result.content)

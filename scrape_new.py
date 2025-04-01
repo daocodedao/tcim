@@ -103,6 +103,28 @@ def log_headline_counts(rows_added, log_filename='headline_counts.csv'):
     
     df.to_csv(log_filename, index=False)
 
+
+def getNewsArray():
+    all_data = []
+    websites = [
+        ('Decrypt', scrape_decrypt),
+        ('Blockworks', scrape_blockworks),
+        ('CoinDesk', scrape_coindesk),
+        ('U.Today', scrape_u_today),
+        ('BeInCrypto', scrape_beincrypto),
+        ('CryptoTimes', scrape_cryptotimes)  # Add CryptoTimes to the list
+    ]
+    
+    rows_added = {}  # Dictionary to store the number of rows added from each website
+    
+    for website_name, scrape_function in websites:
+        rows_before = len(all_data)
+        scrape_function(all_data)
+        rows_added[website_name] = len(all_data) - rows_before
+    
+    return all_data
+
+
 def main(csv_filename='scraped_data.csv', test_csv_filename='test_scraped_data.csv', test=False):
     all_data = []
     websites = [
@@ -142,4 +164,4 @@ def main(csv_filename='scraped_data.csv', test_csv_filename='test_scraped_data.c
         print(f"Rows added from {source}: {count}")
 
 # Call main for testing
-main()
+# main()
