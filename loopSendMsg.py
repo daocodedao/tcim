@@ -16,17 +16,6 @@ HISTORY_DIR = "./history_news"
 if not os.path.exists(HISTORY_DIR):
     os.makedirs(HISTORY_DIR)
 
-groupIds = [
-    "73225880",
-    "15989378",
-    "23342946",
-    "10961043",
-    "14236862",
-    "71628838",
-    "11372931",
-    "97380810",
-]
-
 def get_history_news():
     """获取历史新闻标题集合，并清理超过7天的历史记录"""
     history_titles = set()
@@ -102,7 +91,7 @@ def jobGetMsgAndSend():
     unique_titles = unique_titles[:30]
     prompt = f"""
                 你需要从新闻标题中，生成适合聊天的话题。要求如下
-                1. 话题主要是在群聊里使用，最好是问句，问句不要只针对一个人，比如 你对xxx 怎么看。要改为 你们觉得xxxx
+                1. 话题主要是在群聊里使用，最好是问句，问句要针对所有人，比如 你们觉得xxxx
                 2. 话题的长度不超过30个汉字
                 3. 不适合生成话题的新闻可以跳过
                 4. 话题是中文的
@@ -142,7 +131,6 @@ def jobGetMsgAndSend():
             return
         
         # 开始发送消息到各个群
-        # api_logger.info(f"话题：{topics}")
         send_topics_to_groups(topics)
     except json.JSONDecodeError:
         api_logger.error(f"JSON解析错误: {result}")
@@ -153,33 +141,135 @@ def send_topics_to_groups(topics):
     """将话题发送到各个群组，每隔1-3分钟发送一条"""
     api_logger.info(f"开始发送话题到群组，共{len(topics)}个话题")
     
-    # 确保话题数量足够
-    if len(topics) < len(groupIds):
-        # 如果话题不够，重复使用
-        topics = topics * (len(groupIds) // len(topics) + 1)
+    # 读取群组信息
+    try:
+        with open("./group.json", "r", encoding="utf-8") as f:
+            groups = json.load(f)
+        api_logger.info(f"成功读取群组信息，共{len(groups)}个群组")
+    except Exception as e:
+        api_logger.error(f"读取群组信息失败: {str(e)}")
+        return
+    
+    # 读取用户信息
+    try:
+        with open("./users_fix.json", "r", encoding="utf-8") as f:
+            users = json.load(f)
+        api_logger.info(f"成功读取用户信息，共{len(users)}个用户")
+    except Exception as e:
+        api_logger.error(f"读取用户信息失败: {str(e)}")
+        return
+    
+    # 确保users是一个列表
+    if isinstance(users, dict):
+        users = list(users.values())
     
     # 随机打乱话题顺序
     random.shuffle(topics)
     
-    # 为每个群组分配一个话题
-    for i, group_id in enumerate(groupIds):
-        if i >= len(topics):
-            break
+    # 为每个群组分配一个话题并生成聊天内容
+    used_topics = set()  # 记录已使用的话题
+    
+    for group in groups:
+        group_id = group["groupId"]
+        group_name = group["groupName"]
+        if not group_id:
+            continue
             
-        topic = topics[i]
-        # 随机等待1-3分钟
-        wait_time = random.randint(60, 180)
-        api_logger.info(f"将在{wait_time}秒后发送到群组{group_id}: {topic}")
+        # 选择一个未使用的话题
+        available_topics = [t for t in topics if t not in used_topics]
+        if not available_topics:
+            # 如果所有话题都已使用，重置已使用话题集合
+            used_topics.clear()
+            available_topics = topics
         
-        # 等待指定时间
-        time.sleep(wait_time)
+        topic = random.choice(available_topics)
+        used_topics.add(topic)
         
-        # 发送消息
+        # 随机选择4-6个用户
+        # 确保users是一个序列类型
+        chat_users = random.sample(list(users), min(random.randint(4, 6), len(users)))
+        
+        # 生成聊天内容
+        messages = generate_chat_content(topic, group_name, chat_users)
+        
+        # 发送聊天内容
         try:
-            sendMsg(group_id, topic)
-            api_logger.info(f"成功发送到群组{group_id}: {topic}")
+            for i, message in enumerate(messages):
+                sendMsg(group_id, message["content"], message["userId"])
+                
+                # 每条消息之间随机等待5-15秒
+                time.sleep(random.randint(5, 15))
+            api_logger.info(f"成功发送到群组{group_id}的聊天内容，话题: {topic}")
         except Exception as e:
-            api_logger.info(f"发送到群组{group_id}失败: {str(e)}")
+            api_logger.error(f"发送到群组{group_id}失败: {str(e)}")
+
+def generate_chat_content(topic, group_name, users):
+    """使用OpenAI生成围绕话题的聊天内容"""
+    api_logger.info(f"开始生成话题'{topic}'的聊天内容")
+    
+    # 提取用户信息，包括名称和性别
+    user_infos = []
+    for user in users:
+        name = user.get("nickname", "未知用户")
+        sex = "男" if user.get("sex") == 0 else "女"
+        user_infos.append({"name": name, "sex": sex, "userId": user.get("childId", "未知用户ID")})
+    
+    # 构建用户信息字符串
+    # user_info_str = ", ".join([f"{info['name']}({info['sex']})" for info in user_infos])
+    
+    prompt = f"""
+    请生成一段围绕"{topic}"的群聊对话。要求如下：
+    . 参与聊天的用户有: {user_infos}
+    . 每个用户发言2-3次
+    . 整个对话至少有7-12句
+    . 用户发言要口语化
+    . 用户发言可以只有简单的肯定或者否定等短语
+    . 用户发言要符合用户的性别
+    . 所有用户都在群组里，群组名：{group_name}
+    . 所有聊天群组话题都是有关币圈，虚拟币
+    . 不要预测涨跌，不要回顾过去涨跌，不要评价市场走势，比如挺平稳，涨了不少，跌了很多之类。
+    
+    请以JSON格式返回结果，格式如下:
+    {{
+        "messages": [
+            {{"user": "用户名1", "userId": "用户Id", "content": "消息内容1"}},
+            {{"user": "用户名2", "userId": "用户Id", "content": "消息内容2"}},
+            ...
+        ]
+    }}
+    
+    只返回JSON格式，不要有其他解释。
+    """
+    api_logger.info(prompt)
+    try:
+        response = openAiClient.chat.completions.create(
+            model="Qwen/Qwen2.5-7B-Instruct",
+            messages=[
+                {
+                    "role": "system",
+                    "content": "你是一个聊天助手，负责生成真实、自然的群聊对话，需要考虑用户的性别特点。",
+                },
+                {"role": "user", "content": prompt},
+            ],
+        )
+        
+        result = response.choices[0].message.content
+        api_logger.info(f"生成的聊天内容: {result}")
+        
+        # 解析JSON结果
+        chat_data = json.loads(result)
+        messages = chat_data.get("messages", [])
+        
+        # # 转换为发送格式
+        # formatted_messages = []
+        # for msg in messages:
+        #     formatted_messages.append(f"{msg['user']}: {msg['content']}")
+        
+        return messages
+    except Exception as e:
+        api_logger.error(f"生成聊天内容失败: {str(e)}")
+        # 返回一个简单的备用消息
+        return [f"大家都'{topic}'有什么看法？"]
 
 def run_daily_job():
     """每天早上10点执行任务"""
@@ -194,7 +284,7 @@ def run_daily_job():
 
 if __name__ == "__main__":
     # 如果需要立即执行一次，可以取消下面的注释
-    # jobGetMsgAndSend()
+    jobGetMsgAndSend()
     
     # 启动定时任务
     run_daily_job()
