@@ -91,12 +91,14 @@ def jobGetMsgAndSend():
     unique_titles = unique_titles[:30]
     prompt = f"""
                 你需要从新闻标题中，生成适合聊天的话题。要求如下
-                1. 话题主要是在群聊里使用，最好是问句，问句要针对所有人，比如 你们觉得xxxx
-                2. 话题的长度不超过30个汉字
-                3. 不适合生成话题的新闻可以跳过
-                4. 话题是中文的
-                5. 最少生成20个话题
-                6. 话题要口语化，不要太严肃
+                . 每个新闻都只生产一个话题, 不适合生成话题的新闻可以跳过
+                . 话题要口语化，不要太严肃
+                . 话题主要是在群聊里使用，最好是问句
+                . 问句可以用 你们觉得 你们看 你们怎么看 开头或结尾。也可以不用
+                . 话题的长度不超过30个汉字
+                . 话题是中文的
+                . 最少生成20个话题
+                . 不要出现 各种币价 涨跌预测，涨跌回顾，涨跌评价
 
                 以下是新闻标题:
                 {unique_titles}
@@ -189,11 +191,11 @@ def send_topics_to_groups(topics):
         # 确保users是一个序列类型
         chat_users = random.sample(list(users), min(random.randint(4, 6), len(users)))
         
-        # 生成聊天内容
-        messages = generate_chat_content(topic, group_name, chat_users)
-        
-        # 发送聊天内容
         try:
+            # 生成聊天内容
+            messages = generate_chat_content(topic, group_name, chat_users)
+        
+            # 发送聊天内容
             for i, message in enumerate(messages):
                 sendMsg(group_id, message["content"], message["userId"])
                 
@@ -220,14 +222,13 @@ def generate_chat_content(topic, group_name, users):
     prompt = f"""
     请生成一段围绕"{topic}"的群聊对话。要求如下：
     . 参与聊天的用户有: {user_infos}
-    . 每个用户发言2-3次
-    . 整个对话至少有7-12句
-    . 用户发言要口语化
-    . 用户发言可以只有简单的肯定或者否定等短语
+    . 每个用户发言 1-3 次，整个对话至少有 7-12 次。其中可以有的发言可以简单些，1-3个字，也可以复杂些，10-20个字。
+    . 用户发言要口语化，适合群组聊天
     . 用户发言要符合用户的性别
     . 所有用户都在群组里，群组名：{group_name}
-    . 所有聊天群组话题都是有关币圈，虚拟币
+    . 所有聊天群组话题都是有关币圈，虚拟币。不要讨论股市，不要讨论公司
     . 不要预测涨跌，不要回顾过去涨跌，不要评价市场走势，比如挺平稳，涨了不少，跌了很多之类。
+    。 
     
     请以JSON格式返回结果，格式如下:
     {{
@@ -284,7 +285,7 @@ def run_daily_job():
 
 if __name__ == "__main__":
     # 如果需要立即执行一次，可以取消下面的注释
-    jobGetMsgAndSend()
+    # jobGetMsgAndSend()
     
     # 启动定时任务
     run_daily_job()

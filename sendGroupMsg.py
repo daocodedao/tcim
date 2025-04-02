@@ -12,6 +12,7 @@ sdk_app_id = int(os.getenv('SDK_APP_ID', ''))
 secret_key = os.getenv('SECRET_KEY', '')
 admin_identifier = os.getenv('ADMIN_IDENTIFIER', '')
 
+
 # Changed the API endpoint from console.tim.qq.com to the correct one
 SINGAPORE = "https://adminapisgp.im.qcloud.com/v4"
 CHINA = "https://console.tim.qq.com/v4"
