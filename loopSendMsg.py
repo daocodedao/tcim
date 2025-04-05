@@ -9,7 +9,11 @@ import os
 import datetime
 from utils.logger_settings import api_logger
 
-openAiClient = OpenAI(base_url="http://39.105.194.16:6691/v1", api_key="key")
+openAiClient66 = OpenAI(base_url="http://39.105.194.16:6691/v1", api_key="key")
+model66 = "Qwen/Qwen2.5-7B-Instruct"
+
+openAiClient67 = OpenAI(base_url="http://39.105.194.16:9191/v1", api_key="key")
+model67 = "qwen2.5:7b-instruct-fp16"
 
 # 添加历史新闻存储路径
 HISTORY_DIR = "./history_news"
@@ -108,19 +112,56 @@ def jobGetMsgAndSend():
                     "topics": ["中文话题1", "中文话题2", "..."]
                 }}
                 """    
-        
-    response = openAiClient.chat.completions.create(
-        model="Qwen/Qwen2.5-7B-Instruct",
-        messages=[
-            {
-                "role": "system",
-                "content": "你是一个聊天助手，从各种新闻标题中，生成各种适合聊天的话题。",
-            },
-            {"role": "user", "content": prompt},
-        ],
-    )
-
-    result = response.choices[0].message.content
+    
+    # 添加异常处理和重试逻辑
+    max_retries = 3
+    retry_count = 0
+    
+    while retry_count < max_retries:
+        try:
+            # 首先尝试使用 openAiClient66
+            api_logger.info("尝试使用 openAiClient66 生成话题")
+            response = openAiClient66.chat.completions.create(
+                model=model66,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": "你是一个聊天助手，从各种新闻标题中，生成各种适合聊天的话题。",
+                    },
+                    {"role": "user", "content": prompt},
+                ],
+            )
+            result = response.choices[0].message.content
+            api_logger.info(f"成功使用 openAiClient66 生成话题")
+            break
+        except Exception as e:
+            api_logger.error(f"使用 openAiClient66 生成话题失败: {str(e)}")
+            try:
+                # 尝试使用 openAiClient67
+                api_logger.info("尝试使用 openAiClient67 生成话题")
+                response = openAiClient67.chat.completions.create(
+                    model=model67,
+                    messages=[
+                        {
+                            "role": "system",
+                            "content": "你是一个聊天助手，从各种新闻标题中，生成各种适合聊天的话题。",
+                        },
+                        {"role": "user", "content": prompt},
+                    ],
+                )
+                result = response.choices[0].message.content
+                api_logger.info(f"成功使用 openAiClient67 生成话题")
+                break
+            except Exception as e2:
+                api_logger.error(f"使用 openAiClient67 生成话题也失败: {str(e2)}")
+                retry_count += 1
+                if retry_count < max_retries:
+                    api_logger.info(f"等待60秒后进行第{retry_count+1}次重试")
+                    time.sleep(60)
+                else:
+                    api_logger.error("已达到最大重试次数，放弃生成话题")
+                    return
+    
     api_logger.info(f"生成的话题: {result}")
     
     try:
@@ -216,9 +257,6 @@ def generate_chat_content(topic, group_name, users):
         sex = "男" if user.get("sex") == 0 else "女"
         user_infos.append({"name": name, "sex": sex, "userId": user.get("childId", "未知用户ID")})
     
-    # 构建用户信息字符串
-    # user_info_str = ", ".join([f"{info['name']}({info['sex']})" for info in user_infos])
-    
     prompt = f"""
     请生成一段围绕"{topic}"的群聊对话。要求如下：
     . 参与聊天的用户有: {user_infos}
@@ -242,35 +280,65 @@ def generate_chat_content(topic, group_name, users):
     只返回JSON格式，不要有其他解释。
     """
     api_logger.info(prompt)
+    
+    # 添加异常处理和重试逻辑
+    max_retries = 3
+    retry_count = 0
+    
+    while retry_count < max_retries:
+        try:
+            # 首先尝试使用 openAiClient66
+            api_logger.info("尝试使用 openAiClient66 生成聊天内容")
+            response = openAiClient66.chat.completions.create(
+                model=model66,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": "你是一个聊天助手，负责生成真实、自然的群聊对话，需要考虑用户的性别特点。",
+                    },
+                    {"role": "user", "content": prompt},
+                ],
+            )
+            result = response.choices[0].message.content
+            api_logger.info(f"成功使用 openAiClient66 生成聊天内容")
+            break
+        except Exception as e:
+            api_logger.error(f"使用 openAiClient66 生成聊天内容失败: {str(e)}")
+            try:
+                # 尝试使用 openAiClient67
+                api_logger.info("尝试使用 openAiClient67 生成聊天内容")
+                response = openAiClient67.chat.completions.create(
+                    model=model67,
+                    messages=[
+                        {
+                            "role": "system",
+                            "content": "你是一个聊天助手，负责生成真实、自然的群聊对话，需要考虑用户的性别特点。",
+                        },
+                        {"role": "user", "content": prompt},
+                    ],
+                )
+                result = response.choices[0].message.content
+                api_logger.info(f"成功使用 openAiClient67 生成聊天内容")
+                break
+            except Exception as e2:
+                api_logger.error(f"使用 openAiClient67 生成聊天内容也失败: {str(e2)}")
+                retry_count += 1
+                if retry_count < max_retries:
+                    api_logger.info(f"等待60秒后进行第{retry_count+1}次重试")
+                    time.sleep(60)
+                else:
+                    api_logger.error("已达到最大重试次数，返回备用消息")
+                    return [{"user": "系统", "userId": "", "content": f"大家都'{topic}'有什么看法？"}]
+    
     try:
-        response = openAiClient.chat.completions.create(
-            model="Qwen/Qwen2.5-7B-Instruct",
-            messages=[
-                {
-                    "role": "system",
-                    "content": "你是一个聊天助手，负责生成真实、自然的群聊对话，需要考虑用户的性别特点。",
-                },
-                {"role": "user", "content": prompt},
-            ],
-        )
-        
-        result = response.choices[0].message.content
-        api_logger.info(f"生成的聊天内容: {result}")
-        
         # 解析JSON结果
         chat_data = json.loads(result)
         messages = chat_data.get("messages", [])
-        
-        # # 转换为发送格式
-        # formatted_messages = []
-        # for msg in messages:
-        #     formatted_messages.append(f"{msg['user']}: {msg['content']}")
-        
         return messages
     except Exception as e:
-        api_logger.error(f"生成聊天内容失败: {str(e)}")
+        api_logger.error(f"解析聊天内容JSON失败: {str(e)}")
         # 返回一个简单的备用消息
-        return [f"大家都'{topic}'有什么看法？"]
+        return [{"user": "系统", "userId": "", "content": f"大家都'{topic}'有什么看法？"}]
 
 def run_daily_job():
     """每天早上10点执行任务"""
